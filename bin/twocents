@@ -1,0 +1,109 @@
+#!/usr/bin/env node
+// twocents init <name> | scan [--days N] | link <project>|--skip | run <brief.json> | human <id> <choice> [--reason ".."] [--ruling ".."]
+//            | rulings [promote|retire <id>] | criteria | stats | gate [shadow|enforce|off] | status   [--project name|dir]
+import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { createJev } from "../lib/jev.mjs";
+import { decide, loadProject, readLedger, recordHuman, setRulingStatus, stats } from "../lib/engine.mjs";
+import { dataHome, linkRepo, projectPath, readGlobalConfig, repoStatus, resolveProjectDir, writeGlobalConfig } from "../lib/paths.mjs";
+import { buildDigest } from "../lib/transcripts.mjs";
+
+const args = process.argv.slice(2);
+const flag = (name) => {
+  const i = args.indexOf(`--${name}`);
+  if (i === -1) return undefined;
+  return args.splice(i, 2)[1];
+};
+const bool = (name) => {
+  const i = args.indexOf(`--${name}`);
+  return i !== -1 && Boolean(args.splice(i, 1));
+};
+const projectFlag = flag("project");
+const reason = flag("reason"), ruling = flag("ruling"), days = Number(flag("days") ?? 30);
+const skip = bool("skip");
+const [cmd, a, b] = args;
+const usage = "usage: twocents init <name> | scan [--days N] | link <project>|--skip | status | run <brief.json> | human <id> <choice> [--reason ..] [--ruling ..] | rulings [promote|retire <id>] | criteria | stats | gate [shadow|enforce|off]  [--project name|dir]";
+const done = (msg) => { console.log(msg); process.exit(0); };
+
+if (cmd === "init") {
+  if (!a) throw new Error("usage: twocents init <name>");
+  const dest = projectPath(a);
+  if (existsSync(join(dest, "config.json"))) throw new Error(`${dest} already exists`);
+  await mkdir(join(dest, "briefs"), { recursive: true });
+  await cp(join(dirname(fileURLToPath(import.meta.url)), "..", "examples", "project"), dest, { recursive: true });
+  const { root } = await repoStatus();
+  await linkRepo(root, a);
+  done(`created ${dest} and linked ${root} to it. Fill context.json, criteria.json and rulings.json (the onboard skill drafts them from your past sessions).`);
+}
+
+if (cmd === "scan") {
+  const { root, project } = await repoStatus();
+  const { stats: s, text } = await buildDigest(root, { days });
+  const dir = project ? projectPath(project) : join(dataHome(), "onboarding", root.replace(/[^a-zA-Z0-9]/g, "-"));
+  await mkdir(dir, { recursive: true });
+  const path = join(dir, "onboarding-digest.md");
+  await writeFile(path, text, { mode: 0o600 });
+  console.log(s);
+  done(`digest: ${path}`);
+}
+
+if (cmd === "link") {
+  const { root } = await repoStatus();
+  if (skip) { await linkRepo(root, null); done(`twocents will not offer onboarding in ${root} again. Undo with: twocents link <project>`); }
+  if (!a) throw new Error("usage: twocents link <project> | --skip");
+  if (!existsSync(join(projectPath(a), "config.json"))) throw new Error(`no project at ${projectPath(a)}; run twocents init ${a}`);
+  await linkRepo(root, a);
+  done(`linked ${root} to ${a}`);
+}
+
+if (cmd === "status") {
+  const s = await repoStatus();
+  done(JSON.stringify({ ...s, gate: (await readGlobalConfig()).gate ?? "shadow", home: dataHome() }, null, 2));
+}
+
+if (cmd === "gate") {
+  if (["shadow", "enforce", "off"].includes(a)) {
+    await writeGlobalConfig({ gate: a });
+    done(`gate set to ${a}`);
+  }
+  const mode = (await readGlobalConfig()).gate ?? "shadow";
+  const dir = await resolveProjectDir(projectFlag);
+  let rows = [];
+  try {
+    rows = (await readFile(join(dir, "gate.jsonl"), "utf8")).split("\n").filter(Boolean).map((l) => JSON.parse(l));
+  } catch {}
+  const skipped = rows.filter((r) => !r.jevRan);
+  console.log({ mode, recommendationsSeen: rows.length, withJev: rows.length - skipped.length, withoutJev: skipped.length, blocked: rows.filter((r) => r.action === "block").length });
+  if (skipped.length) console.table(skipped.slice(-10).map((r) => ({ ts: r.ts, phrase: r.phrase, action: r.action })));
+  process.exit(0);
+}
+
+const dir = await resolveProjectDir(projectFlag);
+if (!dir) {
+  console.error(`No twocents project for ${(await repoStatus()).root}. Run the onboard skill, or: twocents init <name>, or pass --project.`);
+  process.exit(1);
+}
+const project = await loadProject(dir);
+
+if (cmd === "run") {
+  const brief = JSON.parse(await readFile(a, "utf8"));
+  const row = await decide(brief, project, { ask: createJev({ model: project.config.model }) });
+  console.log(`${row.id}: Jev picks ${row.jevPick} (margin ${row.margin}); agent picked ${row.claudePick ?? "n/a"}`);
+  console.table(Object.entries(row.overall).map(([k, v]) => ({ option: k, jev: v, text: row.options[k].slice(0, 90) })));
+  console.log(row.verdict === "proceed" ? "VERDICT: proceed" : "VERDICT: escalate to the human\n - " + row.flags.join("\n - "));
+} else if (cmd === "human") {
+  const row = await recordHuman(project, a, b, { reason, ruling });
+  console.log(`recorded: you chose ${row.choice}. Agrees with Jev: ${row.agreesWithJev}. Agrees with the agent: ${row.agreesWithClaude}.${ruling ? " Ruling saved as a candidate." : ""}`);
+} else if (cmd === "rulings") {
+  if (a === "promote" || a === "retire") console.log(await setRulingStatus(project, b, a === "promote" ? "active" : "retired"));
+  else console.table(project.rulings.map((r) => ({ id: r.id, status: r.status, text: r.text.slice(0, 100) })));
+} else if (cmd === "criteria") {
+  console.table(project.criteria.map((c) => ({ id: c.id, status: c.status, weight: c.weight ?? 1, question: c.question.slice(0, 80), could_bias: c.could_bias.slice(0, 60) })));
+} else if (cmd === "stats") {
+  console.log(stats(await readLedger(project)));
+} else {
+  console.log(usage);
+  process.exit(1);
+}

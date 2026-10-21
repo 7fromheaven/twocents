@@ -1,0 +1,14 @@
+{
+  "name": "twocents",
+  "description": "twocents: a Jev second opinion for coding agents",
+  "owner": {
+    "name": "Ari Basmadjian"
+  },
+  "plugins": [
+    {
+      "name": "twocents",
+      "source": "./",
+      "description": "Tailors itself to each repo from your past sessions, judges options with Jev before recommending, flags disagreement, keeps a ledger."
+    }
+  ]
+}

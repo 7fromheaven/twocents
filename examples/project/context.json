@@ -1,0 +1,11 @@
+{
+  "_note": "Sent to Jev with every call. Keep it short, factual and public-safe: no secrets, client names or private notes.",
+  "about_you": "Who you are and how you write, in two or three sentences.",
+  "about_the_product": "What you make, who it is for, and what makes it different.",
+  "goal": "What the current effort is trying to achieve, in your own words.",
+  "audience": "Who the decisions are for.",
+  "style_rules": "Voice and constraints that every option must respect.",
+  "readers": {
+    "default": "A one-sentence description of the typical reader or user."
+  }
+}

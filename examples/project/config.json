@@ -1,0 +1,7 @@
+{
+  "context": "./context.json",
+  "model": "jev-1.14.0",
+  "margin": 0.15,
+  "abstain": 0.6,
+  "maxRulings": 6
+}

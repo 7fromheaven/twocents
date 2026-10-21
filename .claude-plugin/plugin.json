@@ -1,0 +1,8 @@
+{
+  "name": "twocents",
+  "version": "0.3.0",
+  "description": "A second opinion your coding agent must ask for and you can overrule. Tailors itself to each repo from your past sessions, judges options with Jev, flags disagreement, keeps a ledger.",
+  "author": {
+    "name": "Ari Basmadjian"
+  }
+}

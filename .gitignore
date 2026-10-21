@@ -1,0 +1,6 @@
+node_modules/
+.env
+*.key
+.typesafe-key
+ledger.jsonl
+.DS_Store

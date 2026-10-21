@@ -1,0 +1,14 @@
+{
+  "name": "twocents",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "twocents": "bin/twocents"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "description": "A second opinion your coding agent must ask for and you can overrule. Tailors itself to each repo from your past sessions, judges options with Jev, flags disagreement, keeps a ledger.",
+  "license": "MIT"
+}

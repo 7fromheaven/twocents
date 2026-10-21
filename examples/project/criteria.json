@@ -1,0 +1,20 @@
+[
+  {
+    "id": "clarity",
+    "status": "draft",
+    "applies_to": ["copy"],
+    "question": "Which option tells the intended reader most clearly what this is and who it is for?",
+    "rewards": "Plain statement of what it is and who it is for.",
+    "could_bias": "Favours longer, more descriptive text over short, memorable lines.",
+    "weight": 1
+  },
+  {
+    "id": "trust",
+    "status": "draft",
+    "applies_to": ["copy"],
+    "question": "Which option would make a sceptical reader trust the author most?",
+    "rewards": "Specifics, restraint and proof.",
+    "could_bias": "May favour understated text over confident, punchy text.",
+    "weight": 1
+  }
+]

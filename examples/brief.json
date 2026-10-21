@@ -1,0 +1,15 @@
+{
+  "id": "example-tagline",
+  "decision": "Choose the tagline for the Brightly landing page.",
+  "goal": "Visitors, owners of small dental clinics, should understand what Brightly does and want to try it.",
+  "reader": "default",
+  "tags": ["copy"],
+  "criteria": ["clarity", "trust"],
+  "claude_pick": "B",
+  "options": {
+    "A": "Scheduling software for modern dental clinics.",
+    "B": "Fewer no-shows. Fuller chairs. Scheduling built for dental clinics.",
+    "C": "Brightly: the smart way to run your clinic.",
+    "D": "Appointment reminders that patients actually answer."
+  }
+}
